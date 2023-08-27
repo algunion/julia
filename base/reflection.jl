@@ -86,9 +86,9 @@ since it is not idiomatic to explicitly export names from `Main`.
 
 See also: [`@locals`](@ref Base.@locals), [`@__MODULE__`](@ref).
 """
-names(m::Module; all::Bool = false, imported::Bool = false) =
+names(m::Module; all::Bool=false, imported::Bool=false) =
     sort!(unsorted_names(m; all, imported))
-unsorted_names(m::Module; all::Bool = false, imported::Bool = false) =
+unsorted_names(m::Module; all::Bool=false, imported::Bool=false) =
     ccall(:jl_module_names, Array{Symbol,1}, (Any, Cint, Cint), m, all, imported)
 
 isexported(m::Module, s::Symbol) = ccall(:jl_module_exports_p, Cint, (Any, Any), m, s) != 0
@@ -165,7 +165,7 @@ julia> fieldnames(typeof(1+im))
 ```
 """
 fieldnames(t::DataType) = (fieldcount(t); # error check to make sure type is specific enough
-                           (_fieldnames(t)...,))::Tuple{Vararg{Symbol}}
+(_fieldnames(t)...,))::Tuple{Vararg{Symbol}}
 fieldnames(t::UnionAll) = fieldnames(unwrap_unionall(t))
 fieldnames(::Core.TypeofBottom) =
     throw(ArgumentError("The empty type does not have field names since it does not have instances."))
@@ -270,7 +270,7 @@ function isconst(@nospecialize(t::Type), s::Int)
     constfields = t.name.constfields
     constfields === C_NULL && return false
     s -= 1
-    return unsafe_load(Ptr{UInt32}(constfields), 1 + s÷32) & (1 << (s%32)) != 0
+    return unsafe_load(Ptr{UInt32}(constfields), 1 + s ÷ 32) & (1 << (s % 32)) != 0
 end
 
 """
@@ -292,7 +292,7 @@ function isfieldatomic(@nospecialize(t::Type), s::Int)
     atomicfields = t.name.atomicfields
     atomicfields === C_NULL && return false
     s -= 1
-    return unsafe_load(Ptr{UInt32}(atomicfields), 1 + s÷32) & (1 << (s%32)) != 0
+    return unsafe_load(Ptr{UInt32}(atomicfields), 1 + s ÷ 32) & (1 << (s % 32)) != 0
 end
 
 """
@@ -460,7 +460,7 @@ struct FieldDescStorage{T}
 end
 FieldDesc(fd::FieldDescStorage{T}) where {T} =
     FieldDesc(false, fd.ptrsize & 1 != 0,
-              fd.ptrsize >> 1, fd.offset)
+        fd.ptrsize >> 1, fd.offset)
 
 struct DataTypeFieldDesc
     dt::DataType
@@ -680,7 +680,7 @@ has_free_typevars(@nospecialize(t)) = ccall(:jl_has_free_typevars, Cint, (Any,),
 # and is thus perhaps most similar to the old (pre-1.0) `isleaftype` query
 function isdispatchelem(@nospecialize v)
     return (v === Bottom) || (v === typeof(Bottom)) || isconcretedispatch(v) ||
-        (isType(v) && !has_free_typevars(v))
+           (isType(v) && !has_free_typevars(v))
 end
 
 const _TYPE_NAME = Type.body.name
@@ -840,13 +840,13 @@ end
 function _fieldindex_maythrow(T::DataType, name::Symbol)
     @_foldable_meta
     @noinline
-    return Int(ccall(:jl_field_index, Cint, (Any, Any, Cint), T, name, true)+1)
+    return Int(ccall(:jl_field_index, Cint, (Any, Any, Cint), T, name, true) + 1)
 end
 
 function _fieldindex_nothrow(T::DataType, name::Symbol)
     @_total_meta
     @noinline
-    return Int(ccall(:jl_field_index, Cint, (Any, Any, Cint), T, name, false)+1)
+    return Int(ccall(:jl_field_index, Cint, (Any, Any, Cint), T, name, false) + 1)
 end
 
 function fieldindex(t::UnionAll, name::Symbol, err::Bool=true)
@@ -971,7 +971,13 @@ function signature_type(@nospecialize(f), @nospecialize(argtypes))
     argtypes = to_tuple_type(argtypes)
     ft = Core.Typeof(f)
     u = unwrap_unionall(argtypes)::DataType
-    return rewrap_unionall(Tuple{ft, u.parameters...}, argtypes)
+    return rewrap_unionall(Tuple{ft,u.parameters...}, argtypes)
+end
+
+function instance_signature_type(t::Type, @nospecialize(argtypes))
+    argtypes = to_tuple_type(argtypes)
+    u = unwrap_unionall(argtypes)::DataType
+    return rewrap_unionall(Tuple{t,u.parameters...}, argtypes)
 end
 
 """
@@ -990,7 +996,7 @@ The keyword `debuginfo` controls the amount of code metadata present in the outp
 Note that an error will be thrown if `types` are not leaf types when `generated` is
 `true` and any of the corresponding methods are an `@generated` method.
 """
-function code_lowered(@nospecialize(f), @nospecialize(t=Tuple); generated::Bool=true, debuginfo::Symbol=:default)
+function code_lowered(@nospecialize(f), @nospecialize(t = Tuple); generated::Bool=true, debuginfo::Symbol=:default)
     if @isdefined(IRShow)
         debuginfo = IRShow.debuginfo(debuginfo)
     elseif debuginfo === :default
@@ -1006,8 +1012,8 @@ function code_lowered(@nospecialize(f), @nospecialize(t=Tuple); generated::Bool=
                 return ccall(:jl_code_for_staged, Any, (Any, UInt), m, world)::CodeInfo
             else
                 error("Could not expand generator for `@generated` method ", m, ". ",
-                      "This can happen if the provided argument types (", t, ") are ",
-                      "not leaf types, but the `generated` argument is `true`.")
+                    "This can happen if the provided argument types (", t, ") are ",
+                    "not leaf types, but the `generated` argument is `true`.")
             end
         end
         code = uncompressed_ir(m.def::Method)
@@ -1024,7 +1030,7 @@ hasgenerator(m::Core.MethodInstance) = hasgenerator(m.def::Method)
 unionlen(x::Union) = unionlen(x.a) + unionlen(x.b)
 unionlen(@nospecialize(x)) = 1
 
-_uniontypes(x::Union, ts) = (_uniontypes(x.a,ts); _uniontypes(x.b,ts); ts)
+_uniontypes(x::Union, ts) = (_uniontypes(x.a, ts); _uniontypes(x.b, ts); ts)
 _uniontypes(@nospecialize(x), ts) = (push!(ts, x); ts)
 uniontypes(@nospecialize(x)) = _uniontypes(x, Any[])
 
@@ -1036,10 +1042,10 @@ end
 function _methods_by_ftype(@nospecialize(t), lim::Int, world::UInt)
     return _methods_by_ftype(t, nothing, lim, world)
 end
-function _methods_by_ftype(@nospecialize(t), mt::Union{Core.MethodTable, Nothing}, lim::Int, world::UInt)
+function _methods_by_ftype(@nospecialize(t), mt::Union{Core.MethodTable,Nothing}, lim::Int, world::UInt)
     return _methods_by_ftype(t, mt, lim, world, false, RefValue{UInt}(typemin(UInt)), RefValue{UInt}(typemax(UInt)), Ptr{Int32}(C_NULL))
 end
-function _methods_by_ftype(@nospecialize(t), mt::Union{Core.MethodTable, Nothing}, lim::Int, world::UInt, ambig::Bool, min::Ref{UInt}, max::Ref{UInt}, has_ambig::Ref{Int32})
+function _methods_by_ftype(@nospecialize(t), mt::Union{Core.MethodTable,Nothing}, lim::Int, world::UInt, ambig::Bool, min::Ref{UInt}, max::Ref{UInt}, has_ambig::Ref{Int32})
     return ccall(:jl_matching_methods, Any, (Any, Any, Cint, Cint, UInt, Ptr{UInt}, Ptr{UInt}, Ptr{Int32}), t, mt, lim, ambig, world, min, max, has_ambig)::Union{Vector{Any},Nothing}
 end
 
@@ -1077,7 +1083,7 @@ A list of modules can also be specified as an array.
 See also: [`which`](@ref) and `@which`.
 """
 function methods(@nospecialize(f), @nospecialize(t),
-                 mod::Union{Tuple{Module},AbstractArray{Module},Nothing}=nothing)
+    mod::Union{Tuple{Module},AbstractArray{Module},Nothing}=nothing)
     world = get_world_counter()
     # Lack of specialization => a comprehension triggers too many invalidations via _collect, so collect the methods manually
     ms = Method[]
@@ -1101,10 +1107,50 @@ function methods_including_ambiguous(@nospecialize(f), @nospecialize(t))
 end
 
 function methods(@nospecialize(f),
-                 mod::Union{Module,AbstractArray{Module},Nothing}=nothing)
+    mod::Union{Module,AbstractArray{Module},Nothing}=nothing)
     # return all matches
     return methods(f, Tuple{Vararg{Any}}, mod)
 end
+
+function _instancemethods(t::Type, @nospecialize(mt), lim::Int, world::UInt)
+    tt = instance_signature_type(t, mt)
+    return _methods_by_ftype(tt, lim, world)
+end
+
+"""
+    instancemethods(t::Type, [types], [module])
+
+Return the method list for instances of type `t`.
+
+If `types` is specified, return an array of methods whose types match.
+If `module` is specified, return an array of methods defined in that module.
+A list of modules can also be specified as an array.
+
+!!! compat "Julia 1.4"
+    At least Julia 1.4 is required for specifying a module.
+
+See also: [`methods`](@ref).
+"""
+function instancemethods(t::Type,
+    @nospecialize(tmatch),
+    mod::Union{Tuple{Module},AbstractArray{Module},Nothing}=nothing)
+    world = get_world_counter()
+    ms = Method[]
+    for m in _instancemethods(t, tmatch, -1, world)::Vector
+        m = m::Core.MethodMatch
+        (mod === nothing || parentmodule(m.method) ∈ mod) && push!(ms, m.method)
+    end
+    t === Function && return MethodList(ms, typeof(t).name.mt)
+    mt = t isa UnionAll ? unwrap_unionall(t).name.mt : t.name.mt
+    return MethodList(ms, mt)
+end
+instancemethods(t::Type, @nospecialize(tmatch), mod::Module) = instancemethods(t, tmatch, (mod,))
+
+function instancemethods(t::Type,
+    mod::Union{Module,AbstractArray{Module},Nothing}=nothing)
+    return instancemethods(t, Tuple{Vararg{Any}}, mod)
+end
+
 
 function visit(f, mt::Core.MethodTable)
     mt.defs !== nothing && visit(f, mt.defs)
@@ -1149,7 +1195,7 @@ function visit(f, d::Core.TypeMapEntry)
     nothing
 end
 struct MethodSpecializations
-    specializations::Union{Nothing, Core.MethodInstance, Core.SimpleVector}
+    specializations::Union{Nothing,Core.MethodInstance,Core.SimpleVector}
 end
 """
     specializations(m::Method) → itr
@@ -1225,12 +1271,12 @@ struct CodegenParams
     generic_context::Any
 
     function CodegenParams(; track_allocations::Bool=true, code_coverage::Bool=true,
-                   prefer_specsig::Bool=false,
-                   gnu_pubnames=true, debug_info_kind::Cint = default_debug_info_kind(),
-                   safepoint_on_entry::Bool=true,
-                   gcstack_arg::Bool=true,
-                   lookup::Ptr{Cvoid}=unsafe_load(cglobal(:jl_rettype_inferred_addr, Ptr{Cvoid})),
-                   generic_context = nothing)
+        prefer_specsig::Bool=false,
+        gnu_pubnames=true, debug_info_kind::Cint=default_debug_info_kind(),
+        safepoint_on_entry::Bool=true,
+        gcstack_arg::Bool=true,
+        lookup::Ptr{Cvoid}=unsafe_load(cglobal(:jl_rettype_inferred_addr, Ptr{Cvoid})),
+        generic_context=nothing)
         return new(
             Cint(track_allocations), Cint(code_coverage),
             Cint(prefer_specsig),
@@ -1274,8 +1320,8 @@ function may_invoke_generator(method::Method, @nospecialize(atype), sparams::Sim
     # generator only has one method
     generator = method.generator
     isa(generator, Core.GeneratedFunctionStub) || return false
-    tt = Tuple{typeof(generator.gen), Vararg{Any}}
-    gen_mthds = _methods_by_ftype(tt, #=lim=#1, method.primary_world)
+    tt = Tuple{typeof(generator.gen),Vararg{Any}}
+    gen_mthds = _methods_by_ftype(tt, 1, method.primary_world) #=lim=#
     gen_mthds isa Vector || return false
     length(gen_mthds) == 1 || return false
 
@@ -1323,7 +1369,7 @@ end
 function func_for_method_checked(m::Method, @nospecialize(types), sparams::SimpleVector)
     if isdefined(m, :generator) && !may_invoke_generator(m, types, sparams)
         error("cannot call @generated function `", m, "` ",
-              "with abstract argument types: ", types)
+            "with abstract argument types: ", types)
     end
     return m
 end
@@ -1364,7 +1410,7 @@ julia> code_typed(+, (Float64, Float64))
 ) => Float64
 ```
 """
-function code_typed(@nospecialize(f), @nospecialize(types=default_tt(f)); kwargs...)
+function code_typed(@nospecialize(f), @nospecialize(types = default_tt(f)); kwargs...)
     if isa(f, Core.OpaqueClosure)
         return code_typed_opaque_closure(f; kwargs...)
     end
@@ -1391,10 +1437,10 @@ Similar to [`code_typed`](@ref), except the argument is a tuple type describing
 a full signature to query.
 """
 function code_typed_by_type(@nospecialize(tt::Type);
-                            optimize::Bool=true,
-                            debuginfo::Symbol=:default,
-                            world::UInt=get_world_counter(),
-                            interp::Core.Compiler.AbstractInterpreter=Core.Compiler.NativeInterpreter(world))
+    optimize::Bool=true,
+    debuginfo::Symbol=:default,
+    world::UInt=get_world_counter(),
+    interp::Core.Compiler.AbstractInterpreter=Core.Compiler.NativeInterpreter(world))
     (ccall(:jl_is_in_pure_context, Bool, ()) || world == typemax(UInt)) &&
         error("code reflection cannot be used from generated functions")
     if @isdefined(IRShow)
@@ -1406,7 +1452,7 @@ function code_typed_by_type(@nospecialize(tt::Type);
         throw(ArgumentError("'debuginfo' must be either :source or :none"))
     end
     tt = to_tuple_type(tt)
-    matches = _methods_by_ftype(tt, #=lim=#-1, world)::Vector
+    matches = _methods_by_ftype(tt, -1, world)::Vector #=lim=#
     asts = []
     for match in matches
         match = match::Core.MethodMatch
@@ -1423,7 +1469,7 @@ function code_typed_by_type(@nospecialize(tt::Type);
 end
 
 function code_typed_opaque_closure(@nospecialize(oc::Core.OpaqueClosure);
-                                   debuginfo::Symbol=:default, _...)
+    debuginfo::Symbol=:default, _...)
     ccall(:jl_is_in_pure_context, Bool, ()) && error("code reflection cannot be used from generated functions")
     m = oc.source
     if isa(m, Method)
@@ -1431,7 +1477,7 @@ function code_typed_opaque_closure(@nospecialize(oc::Core.OpaqueClosure);
         debuginfo === :none && remove_linenums!(code)
         # intersect the declared return type and the inferred return type (if available)
         rt = typeintersect(code.rettype, typeof(oc).parameters[2])
-        return Any[code => rt]
+        return Any[code=>rt]
     else
         error("encountered invalid Core.OpaqueClosure object")
     end
@@ -1498,12 +1544,12 @@ function code_ircode_by_type(
     @nospecialize(tt::Type);
     world::UInt=get_world_counter(),
     interp::Core.Compiler.AbstractInterpreter=Core.Compiler.NativeInterpreter(world),
-    optimize_until::Union{Integer,AbstractString,Nothing}=nothing,
+    optimize_until::Union{Integer,AbstractString,Nothing}=nothing
 )
     (ccall(:jl_is_in_pure_context, Bool, ()) || world == typemax(UInt)) &&
         error("code reflection cannot be used from generated functions")
     tt = to_tuple_type(tt)
-    matches = _methods_by_ftype(tt, #=lim=#-1, world)::Vector
+    matches = _methods_by_ftype(tt, -1, world)::Vector #=lim=#
     asts = []
     for match in matches
         match = match::Core.MethodMatch
@@ -1557,9 +1603,9 @@ julia> Base.return_types(sum, (Union{Vector{Int},UnitRange{Int}},))
     The `return_types` function should not be used from generated functions;
     doing so will result in an error.
 """
-function return_types(@nospecialize(f), @nospecialize(types=default_tt(f));
-                      world::UInt=get_world_counter(),
-                      interp::Core.Compiler.AbstractInterpreter=Core.Compiler.NativeInterpreter(world))
+function return_types(@nospecialize(f), @nospecialize(types = default_tt(f));
+    world::UInt=get_world_counter(),
+    interp::Core.Compiler.AbstractInterpreter=Core.Compiler.NativeInterpreter(world))
     (ccall(:jl_is_in_pure_context, Bool, ()) || world == typemax(UInt)) &&
         error("code reflection cannot be used from generated functions")
     if isa(f, Core.OpaqueClosure)
@@ -1574,7 +1620,7 @@ function return_types(@nospecialize(f), @nospecialize(types=default_tt(f));
     end
     rts = []
     tt = signature_type(f, types)
-    matches = _methods_by_ftype(tt, #=lim=#-1, world)::Vector
+    matches = _methods_by_ftype(tt, -1, world)::Vector #=lim=#
     for match in matches
         match = match::Core.MethodMatch
         meth = func_for_method_checked(match.method, types, match.sparams)
@@ -1620,9 +1666,9 @@ This function will return an `Effects` object with information about the computa
 - [`Core.Compiler.Effects`](@ref): A type representing the computational effects of a method call.
 - [`Base.@assume_effects`](@ref): A macro for making assumptions about the effects of a method.
 """
-function infer_effects(@nospecialize(f), @nospecialize(types=default_tt(f));
-                       world = get_world_counter(),
-                       interp = Core.Compiler.NativeInterpreter(world))
+function infer_effects(@nospecialize(f), @nospecialize(types = default_tt(f));
+    world=get_world_counter(),
+    interp=Core.Compiler.NativeInterpreter(world))
     (ccall(:jl_is_in_pure_context, Bool, ()) || world == typemax(UInt)) &&
         error("code reflection cannot be used from generated functions")
     if isa(f, Core.Builtin)
@@ -1640,14 +1686,14 @@ function infer_effects(@nospecialize(f), @nospecialize(types=default_tt(f));
     end
     (; matches) = result
     effects = Core.Compiler.EFFECTS_TOTAL
-    if matches.ambig || !any(match::Core.MethodMatch->match.fully_covers, matches.matches)
+    if matches.ambig || !any(match::Core.MethodMatch -> match.fully_covers, matches.matches)
         # account for the fact that we may encounter a MethodError with a non-covered or ambiguous signature.
         effects = Core.Compiler.Effects(effects; nothrow=false)
     end
     for match in matches.matches
         match = match::Core.MethodMatch
         frame = Core.Compiler.typeinf_frame(interp,
-            match.method, match.spec_types, match.sparams, #=run_optimizer=#false)
+            match.method, match.spec_types, match.sparams, false) #=run_optimizer=#
         frame === nothing && return Core.Compiler.Effects()
         effects = Core.Compiler.merge_effects(effects, frame.ipo_effects)
     end
@@ -1666,10 +1712,10 @@ function print_statement_costs(io::IO, @nospecialize(f), @nospecialize(t); kwarg
 end
 
 function print_statement_costs(io::IO, @nospecialize(tt::Type);
-                               world::UInt=get_world_counter(),
-                               interp::Core.Compiler.AbstractInterpreter=Core.Compiler.NativeInterpreter(world))
+    world::UInt=get_world_counter(),
+    interp::Core.Compiler.AbstractInterpreter=Core.Compiler.NativeInterpreter(world))
     tt = to_tuple_type(tt)
-    matches = _methods_by_ftype(tt, #=lim=#-1, world)::Vector
+    matches = _methods_by_ftype(tt, -1, world)::Vector #=lim=#
     params = Core.Compiler.OptimizationParams(interp)
     cst = Int[]
     for match in matches
@@ -1686,7 +1732,7 @@ function print_statement_costs(io::IO, @nospecialize(tt::Type);
             maxcost = Core.Compiler.statement_costs!(cst, code.code, code, sptypes, params)
             nd = ndigits(maxcost)
             irshow_config = IRShow.IRShowConfig() do io, linestart, idx
-                print(io, idx > 0 ? lpad(cst[idx], nd+1) : " "^(nd+1), " ")
+                print(io, idx > 0 ? lpad(cst[idx], nd + 1) : " "^(nd + 1), " ")
                 return ""
             end
             IRShow.show_ir(io, code, irshow_config)
@@ -1736,7 +1782,7 @@ end
 
 Returns the method that would be called by the given type signature (as a tuple type).
 """
-function which(@nospecialize(tt#=::Type=#))
+function which(@nospecialize(tt)) #=::Type=#
     return _which(tt).method
 end
 
@@ -1859,7 +1905,7 @@ function hasmethod(f, t, kwnames::Tuple{Vararg{Symbol}}; world::UInt=get_world_c
     t = to_tuple_type(t)
     ft = Core.Typeof(f)
     u = unwrap_unionall(t)::DataType
-    tt = rewrap_unionall(Tuple{typeof(Core.kwcall), NamedTuple, ft, u.parameters...}, t)
+    tt = rewrap_unionall(Tuple{typeof(Core.kwcall),NamedTuple,ft,u.parameters...}, t)
     match = ccall(:jl_gf_invoke_lookup, Any, (Any, Any, UInt), tt, nothing, world)
     match === nothing && return false
     kws = ccall(:jl_uncompress_argnames, Array{Symbol,1}, (Any,), (match::Method).slot_syms)
